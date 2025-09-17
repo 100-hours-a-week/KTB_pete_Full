@@ -41,7 +41,15 @@ public class Main {
         if (drinkNum >= 1 && drinkNum <= repo.getDrinks().size()) {
             order.addTool(new OrderTool(repo.getDrinks().get(drinkNum - 1)));
         }
-        System.out.println("총액: " + order.calculateTotal() + "원");
+
+        // 총액 계산
+        int total = order.calculateTotal();
+        System.out.println("총액: " + total + "원");
+
+        // 결제
+        Payment payment = new Payment();
+        payment.methodPayment(total);
+
         System.out.println("주문이 완료되었습니다.");
         System.out.println("이용해 주셔서 감사합니다.");
     }
