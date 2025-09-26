@@ -3,6 +3,7 @@ package menu;
 import java.util.*;
 
 public class MenuRepository {
+    private List<SetMenu> setMenus = new ArrayList<>();
     private List<Burger> burgers = new ArrayList<>();
     private List<Side> sides = new ArrayList<>();
     private List<Drink> drinks = new ArrayList<>();
@@ -25,14 +26,16 @@ public class MenuRepository {
         burgers.add(new Burger(3, "데리버거", 3800));
 
         // 세트버거
-        burgers.add(new SetBurger(4, "불고기버거 세트", 4500, fries, cola, 1000));
-        burgers.add(new SetBurger(5, "치즈버거 세트", 5000, cheeseStick, cider, 1000));
-        burgers.add(new SetBurger(6, "데리버거 세트", 3800, cheeseStick, cider, 1000));
+        setMenus.add(new SetMenu(6, "불고기버거 세트", burgers.get(0), fries, cola, 1000));
+        setMenus.add(new SetMenu(7, "치즈버거 세트", burgers.get(1), cheeseStick, cider, 1000));
     }
 
     // get 메소드 프라이빗 사용 위함
     public List<Burger> getBurgers() {
         return burgers;
+    }
+    public List<SetMenu> getSetMenus() {
+        return setMenus;
     }
     public List<Side> getSides() {
         return sides;
