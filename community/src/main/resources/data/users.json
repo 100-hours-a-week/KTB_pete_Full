@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "email": "pete@example.com",
+    "password": "pass1234",
+    "nickname": "Pete",
+    "profileImageUrl": null,
+    "createdAt": "2025-10-17T01:23:45Z",
+    "updatedAt": "2025-10-17T01:23:45Z"
+  },
+  {
+    "id": 2,
+    "email": "alice@example.com",
+    "password": "alicepw",
+    "nickname": "Alice",
+    "profileImageUrl": null,
+    "createdAt": "2025-10-17T01:25:00Z",
+    "updatedAt": "2025-10-17T01:25:00Z"
+  }
+]

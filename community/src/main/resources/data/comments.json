@@ -1,0 +1,18 @@
+[
+  {
+    "id": 5001,
+    "postId": 1001,
+    "authorId": 1,
+    "content": "첫 댓글!",
+    "createdAt": "2025-10-18T04:00:00Z",
+    "updatedAt": "2025-10-18T04:00:00Z"
+  },
+  {
+    "id": 5002,
+    "postId": 1001,
+    "authorId": 2,
+    "content": "두 번째 댓글 :)",
+    "createdAt": "2025-10-18T04:05:00Z",
+    "updatedAt": "2025-10-18T04:05:00Z"
+  }
+]
