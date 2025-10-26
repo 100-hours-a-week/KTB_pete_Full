@@ -1,4 +1,7 @@
-package com.example.community.common; // 공통 패키지
+package com.example.community.common.security; // 공통 패키지
+
+import com.example.community.common.BusinessException;
+import com.example.community.common.ErrorCode;
 
 // jwt 토큰 형식 대신용
 public class TokenUtil {

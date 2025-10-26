@@ -3,7 +3,7 @@ package com.example.community.controller;
 import com.example.community.common.ApiResponse;
 import com.example.community.common.BusinessException;
 import com.example.community.common.ErrorCode;
-import com.example.community.common.TokenUtil;
+import com.example.community.common.security.TokenUtil;
 import com.example.community.dto.comment.CommentCreateRequest;
 import com.example.community.dto.comment.CommentListResponse;
 import com.example.community.dto.comment.CommentResponse;
@@ -33,6 +33,18 @@ public class CommentController {
 
     // 생성
     @PostMapping
+    @io.swagger.v3.oas.annotations.Operation(summary = "댓글 생성", description = "PathVariable과 body.post_id 불일치 시 400")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400", description = "요청 값이 올바르지 않습니다.",
+                    content = @io.swagger.v3.oas.annotations.media.Content(
+                            mediaType = "application/json",
+                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    value = "{\"isSuccess\":false,\"code\":400,\"message\":\"요청 값이 올바르지 않습니다.\",\"result\":null}"
+                            )
+                    )
+            )
+    })
     public ApiResponse<CommentResponse> create(
             @RequestHeader(value = "Authorization", required = false) String auth,
             @PathVariable("postId") Long postId,
@@ -109,6 +121,18 @@ public class CommentController {
 
     // 수정
     @PatchMapping("/{commentId}")
+    @io.swagger.v3.oas.annotations.Operation(summary = "댓글 수정", description = "작성자 불일치 시 403 가능")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403", description = "권한이 없습니다.",
+                    content = @io.swagger.v3.oas.annotations.media.Content(
+                            mediaType = "application/json",
+                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    value = "{\"isSuccess\":false,\"code\":403,\"message\":\"권한이 없습니다.\",\"result\":null}"
+                            )
+                    )
+            )
+    })
     public ApiResponse<CommentResponse> update(
             @RequestHeader(value = "Authorization", required = false) String auth,
             @PathVariable("postId") Long postId,
@@ -135,6 +159,18 @@ public class CommentController {
 
     // 삭제
     @DeleteMapping("/{commentId}")
+    @io.swagger.v3.oas.annotations.Operation(summary = "댓글 삭제", description = "작성자 불일치 시 403 가능")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403", description = "권한이 없습니다.",
+                    content = @io.swagger.v3.oas.annotations.media.Content(
+                            mediaType = "application/json",
+                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    value = "{\"isSuccess\":false,\"code\":403,\"message\":\"권한이 없습니다.\",\"result\":null}"
+                            )
+                    )
+            )
+    })
     public ApiResponse<Void> delete(
             @RequestHeader(value = "Authorization", required = false) String auth,
             @PathVariable("postId") Long postId,

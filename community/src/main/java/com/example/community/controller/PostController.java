@@ -1,7 +1,7 @@
 package com.example.community.controller;
 
 import com.example.community.common.ApiResponse;
-import com.example.community.common.TokenUtil;
+import com.example.community.common.security.TokenUtil;
 import com.example.community.dto.post.PageMeta;
 import com.example.community.dto.post.PostCreateRequest;
 import com.example.community.dto.post.PostListResponse;
@@ -31,6 +31,19 @@ public class PostController {
 
     // 게시글 생성
     @PostMapping
+    @io.swagger.v3.oas.annotations.Operation(summary = "게시글 생성")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            // 전역: 400/401/404/500 자동
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400", description = "검증 실패 (예시)",
+                    content = @io.swagger.v3.oas.annotations.media.Content(
+                            mediaType = "application/json",
+                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    value = "{\"isSuccess\":false,\"code\":400,\"message\":\"요청 값이 올바르지 않습니다.\",\"result\":null}"
+                            )
+                    )
+            )
+    })
     public ApiResponse<PostResponse> create(
             @RequestHeader(value = "Authorization", required = false) String auth,
             @Valid @RequestBody PostCreateRequest body
@@ -122,6 +135,18 @@ public class PostController {
 
     // 게시글 수정
     @PatchMapping("/{postId}")
+    @io.swagger.v3.oas.annotations.Operation(summary = "게시글 수정", description = "작성자 불일치 시 403 반환 가능")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403", description = "권한이 없습니다.",
+                    content = @io.swagger.v3.oas.annotations.media.Content(
+                            mediaType = "application/json",
+                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    value = "{\"isSuccess\":false,\"code\":403,\"message\":\"권한이 없습니다.\",\"result\":null}"
+                            )
+                    )
+            )
+    })
     public ApiResponse<PostResponse> update(
             @RequestHeader(value = "Authorization", required = false) String auth,
             @PathVariable("postId") Long postId,
