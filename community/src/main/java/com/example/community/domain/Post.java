@@ -1,30 +1,52 @@
 package com.example.community.domain;
 
+import com.example.community.common.util.Numbers;
+import com.example.community.common.util.Strings;
+import jakarta.persistence.*;
+
 import java.time.Instant;
 
-/**
- * 게시글 도메인(엔티티).
- * - PDF 명세 일치 버전
- * - image / comments / likes / views 필드 추가
- */
+@Entity
+@Table(name = "posts")
 public class Post {
-    private Long id;           // 게시글 고유 ID
-    private Long authorId;     // 작성자 ID (User.id 참조)
-    private String title;      // 제목
-    private String content;    // 내용
-    private String image;      // 대표 이미지 URL (nullable)
-    private Long comments;     // 댓글 수
-    private Long likes;        // 좋아요 수
-    private Long views;        // 조회수
-    private Instant createdAt; // 생성 시각
-    private Instant updatedAt; // 수정 시각
 
-    public Post() {}
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    // 전체 필드 초기화용 생성자
-    public Post(Long id, Long authorId, String title, String content,
-                String image, Long comments, Long likes, Long views,
-                Instant createdAt, Instant updatedAt) {
+    // 여기서는 관계를 안 쓰고 authorId만 저장 (기존 코드와 호환)
+    @Column(name = "author_id", nullable = false)
+    private Long authorId;
+
+    @Column(nullable = false, length = 255)
+    private String title;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
+
+    @Column(length = 500)
+    private String image;
+
+    @Column
+    private Long comments;
+
+    @Column
+    private Long likes;
+
+    @Column
+    private Long views;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    protected Post() {
+    }
+
+    private Post(Long id, Long authorId, String title, String content, String image,
+                 Long comments, Long likes, Long views, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.authorId = authorId;
         this.title = title;
@@ -35,6 +57,76 @@ public class Post {
         this.views = views;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+    }
+
+    public static Post create(Long authorId, String title, String content, String image) {
+        Instant now = Instant.now();
+        return new Post(
+                null,
+                authorId,
+                title,
+                content,
+                Strings.nullToEmpty(image),
+                0L,
+                0L,
+                0L,
+                now,
+                now
+        );
+    }
+
+    public void touchUpdatedAt(Instant now) {
+        this.updatedAt = now;
+    }
+
+    public void increaseViews() {
+        long v = Numbers.longOrZero(this.views);
+        this.views = v + 1L;
+    }
+
+    public void increaseComments() {
+        long c = Numbers.longOrZero(this.comments);
+        this.comments = c + 1L;
+    }
+
+    public void decreaseCommentsIfPossible() {
+        long c = Numbers.longOrZero(this.comments);
+        if (c > 0L) {
+            this.comments = c - 1L;
+        }
+    }
+
+    public void increaseLikes() {
+        long v = Numbers.longOrZero(this.likes);
+        this.likes = v + 1L;
+    }
+
+    public void decreaseLikesIfPossible() {
+        long v = Numbers.longOrZero(this.likes);
+        if (v > 0L) {
+            this.likes = v - 1L;
+        }
+    }
+
+    public void updatePartial(String newTitle, String newContent, String newImage) {
+        if (newTitle != null) {
+            String t = newTitle.trim();
+            if (!t.isEmpty()) {
+                this.title = t;
+            }
+        }
+        if (newContent != null) {
+            String c = newContent.trim();
+            if (!c.isEmpty()) {
+                this.content = c;
+            }
+        }
+        if (newImage != null) {
+            String i = newImage.trim();
+            if (!i.isEmpty()) {
+                this.image = i;
+            }
+        }
     }
 
     // 게터
@@ -48,16 +140,4 @@ public class Post {
     public Long getViews() { return views; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
-
-    // 세터
-    public void setId(Long id) { this.id = id; }
-    public void setAuthorId(Long authorId) { this.authorId = authorId; }
-    public void setTitle(String title) { this.title = title; }
-    public void setContent(String content) { this.content = content; }
-    public void setImage(String image) { this.image = image; }
-    public void setComments(Long comments) { this.comments = comments; }
-    public void setLikes(Long likes) { this.likes = likes; }
-    public void setViews(Long views) { this.views = views; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

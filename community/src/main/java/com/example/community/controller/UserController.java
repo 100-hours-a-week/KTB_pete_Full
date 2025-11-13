@@ -1,13 +1,13 @@
 package com.example.community.controller;
 
 import com.example.community.common.ApiResponse;
-import com.example.community.common.security.TokenUtil;
+import com.example.community.common.web.CurrentUserId;
 import com.example.community.dto.user.UpdateMeRequest;
 import com.example.community.dto.user.UserResponse;
 import com.example.community.domain.User;
+import com.example.community.mapper.UserMapper;
 import com.example.community.service.UserService;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequestMapping("/users")
@@ -22,82 +22,37 @@ public class UserController {
     // 내 정보 조회
     @GetMapping("/me")
     @io.swagger.v3.oas.annotations.Operation(summary = "내 정보 조회")
-    public ApiResponse<UserResponse> me(@RequestHeader(value = "Authorization", required = false) String auth) {
-        Long userId = TokenUtil.resolveUserId(auth);
+    public ApiResponse<UserResponse> me(@CurrentUserId Long userId) {
         User u = users.getMe(userId);
-
-        String createdAtStr = (u.getCreatedAt() != null) ? u.getCreatedAt().toString() : "unknown";
-        String updatedAtStr = (u.getUpdatedAt() != null) ? u.getUpdatedAt().toString() : "unknown";
-
-        UserResponse response = new UserResponse(
-                u.getId(), u.getEmail(), u.getNickname(),
-                u.getProfileImageUrl(), createdAtStr, updatedAtStr
-        );
-        return ApiResponse.ok("유저 정보 조회 성공", response);
+        return ApiResponse.ok("유저 정보 조회 성공", UserMapper.toResponse(u));
     }
 
     // 내 정보 수정
     @PatchMapping("/me")
     @io.swagger.v3.oas.annotations.Operation(summary = "내 정보 수정", description = "검증 실패 400 가능")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "400", description = "요청 값이 올바르지 않습니다.",
-                    content = @io.swagger.v3.oas.annotations.media.Content(
-                            mediaType = "application/json",
-                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
-                                    value = "{\"isSuccess\":false,\"code\":400,\"message\":\"요청 값이 올바르지 않습니다.\",\"result\":null}"
-                            )
-                    )
-            )
-    })
     public ApiResponse<UserResponse> updateMe(
-            @RequestHeader(value = "Authorization", required = false) String auth,
+            @CurrentUserId Long userId,
             @RequestBody UpdateMeRequest body
     ) {
-        Long userId = TokenUtil.resolveUserId(auth);
         User u = users.updateMe(userId, body.nickname, body.profileImage);
-
-        String createdAtStr = (u.getCreatedAt() != null) ? u.getCreatedAt().toString() : "unknown";
-        String updatedAtStr = (u.getUpdatedAt() != null) ? u.getUpdatedAt().toString() : "unknown";
-
-        UserResponse response = new UserResponse(
-                u.getId(), u.getEmail(), u.getNickname(),
-                u.getProfileImageUrl(), createdAtStr, updatedAtStr
-        );
-        return ApiResponse.ok("유저 정보 수정 성공", response);
+        return ApiResponse.ok("유저 정보 수정 성공", UserMapper.toResponse(u));
     }
 
     // 비밀번호 변경
     @PatchMapping("/me/password")
     @io.swagger.v3.oas.annotations.Operation(summary = "비밀번호 변경", description = "구/신규 비밀번호 검증 실패 400 가능")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "400", description = "요청 값이 올바르지 않습니다.",
-                    content = @io.swagger.v3.oas.annotations.media.Content(
-                            mediaType = "application/json",
-                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
-                                    value = "{\"isSuccess\":false,\"code\":400,\"message\":\"요청 값이 올바르지 않습니다.\",\"result\":null}"
-                            )
-                    )
-            )
-    })
-    public ResponseEntity<ApiResponse<String>> updatePassword(
-            @RequestHeader(value = "Authorization", required = false) String auth,
+    public ApiResponse<String> updatePassword(
+            @CurrentUserId Long userId,
             @jakarta.validation.Valid @RequestBody com.example.community.dto.user.UpdatePasswordRequest body
     ) {
-        Long userId = TokenUtil.resolveUserId(auth);
-
-        // 서비스 메서드가 updatePassword(oldPw, newPw)로 교체되어 있어야 함
         users.updatePassword(userId, body.oldPassword, body.newPassword);
-
-        return ResponseEntity.ok(com.example.community.common.ApiResponse.ok("OK", "ok"));
+        return ApiResponse.ok("OK", "ok");
     }
 
     // 회원 탈퇴
     @DeleteMapping("/me")
     @io.swagger.v3.oas.annotations.Operation(summary = "회원 탈퇴")
-    public ApiResponse<Void> withdraw(@RequestHeader(value = "Authorization", required = false) String auth) {
-        Long userId = TokenUtil.resolveUserId(auth);
+    public ApiResponse<Void> withdraw(@CurrentUserId Long userId) {
         users.withdraw(userId);
         return ApiResponse.ok("유저 탈퇴 성공", null);
     }

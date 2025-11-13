@@ -3,21 +3,21 @@ package com.example.community.controller;
 import com.example.community.common.ApiResponse;
 import com.example.community.common.BusinessException;
 import com.example.community.common.ErrorCode;
-import com.example.community.common.security.TokenUtil;
-import com.example.community.dto.comment.CommentCreateRequest;
-import com.example.community.dto.comment.CommentListResponse;
-import com.example.community.dto.comment.CommentResponse;
-import com.example.community.dto.comment.CommentUpdateRequest;
+import com.example.community.common.web.CurrentUserId;
+import com.example.community.common.sort.CommentSortBy;
+import com.example.community.common.sort.SortDir;
+import com.example.community.dto.comment.*;
 import com.example.community.dto.post.PageMeta;
 import com.example.community.domain.Comment;
 import com.example.community.domain.User;
+import com.example.community.mapper.CommentMapper;
+import com.example.community.service.CommentLikeService;
 import com.example.community.service.CommentService;
 import com.example.community.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @RestController
 @RequestMapping("/board/posts/{postId}/comments")
@@ -25,10 +25,12 @@ public class CommentController {
 
     private final CommentService commentService;
     private final UserService userService;
+    private final CommentLikeService commentLikeService;
 
-    public CommentController(CommentService commentService, UserService userService) {
+    public CommentController(CommentService commentService, UserService userService, CommentLikeService commentLikeService) {
         this.commentService = commentService;
         this.userService = userService;
+        this.commentLikeService = commentLikeService;
     }
 
     // 생성
@@ -46,35 +48,22 @@ public class CommentController {
             )
     })
     public ApiResponse<CommentResponse> create(
-            @RequestHeader(value = "Authorization", required = false) String auth,
+            @CurrentUserId Long userId,
             @PathVariable("postId") Long postId,
             @Valid @RequestBody CommentCreateRequest body
     ) {
-        // body.post_id가 왔다면 PathVariable과 반드시 일치해야 함 → 불일치면 400
-        if (body.post_id != null && !body.post_id.equals(String.valueOf(postId))) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST);
+        if (body.post_id != null) {
+            String expected = String.valueOf(postId);
+            if (!expected.equals(body.post_id)) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST);
+            }
         }
 
-        Long authorId = TokenUtil.resolveUserId(auth);
-        Comment c = commentService.create(postId, authorId, body.content);
-
-        User author = userService.getMe(authorId);
-
-        String createdAtStr = (c.getCreatedAt() != null) ? c.getCreatedAt().toString() : "unknown";
-        String updatedAtStr = (c.getUpdatedAt() != null) ? c.getUpdatedAt().toString() : "unknown";
-
-        CommentResponse res = new CommentResponse(
-                c.getId(),
-                c.getPostId(),
-                author.getId(),
-                c.getContent(),
-                createdAtStr,
-                updatedAtStr
-        );
+        Comment c = commentService.create(postId, userId, body.content);
+        CommentResponse res = CommentMapper.toResponse(c, userId, 0L);
         return ApiResponse.ok("댓글 작성 성공", res);
     }
 
-    // 목록
     @GetMapping
     public ApiResponse<CommentListResponse> list(
             @PathVariable("postId") Long postId,
@@ -83,36 +72,61 @@ public class CommentController {
             @RequestParam(value = "sort", required = false) String sort,
             @RequestParam(value = "dir", required = false) String dir
     ) {
-        int p = (page != null && page.intValue() >= 0) ? page.intValue() : 0;
-        int s = (size != null && size.intValue() > 0) ? size.intValue() : 10;
-        String sortKey = (sort != null) ? sort : "createdAt";
-        String direction = (dir != null) ? dir : "desc";
+        int p = 0;
+        if (page != null) {
+            int v = page.intValue();
+            if (v >= 0) {
+                p = v;
+            }
+        }
+        int s = 10;
+        if (size != null) {
+            int v = size.intValue();
+            if (v > 0) {
+                s = v;
+            }
+        }
 
-        List<Comment> data = commentService.listByPostPaged(postId, p, s, sortKey, direction);
+        CommentSortBy sortBy = CommentSortBy.from(sort); // 현재 createdAt 고정
+        SortDir direction = SortDir.from(dir);
 
-        long totalElements = commentService.countByPost(postId);
-        int totalPages = (int) ((totalElements + s - 1) / s);
+        org.springframework.data.domain.Page<Comment> pageResult =
+                commentService.listByPostPaged(postId, p, s, sortBy, direction);
 
-        List<CommentResponse> items = new ArrayList<>();
-        int i = 0;
+        List<Comment> data = pageResult.getContent();
+        long totalElements = pageResult.getTotalElements();
+        int totalPages = pageResult.getTotalPages();
+
+        // 1) 작성자 id 수집 + 댓글 id 수집
+        Set<Long> authorIds = new HashSet<Long>();
+        List<Long> commentIds = new ArrayList<Long>();
+
         int sizeList = data.size();
+        int i = 0;
         while (i < sizeList) {
             Comment c = data.get(i);
-            User author = userService.getMe(c.getAuthorId());
+            if (c != null) {
+                Long aid = c.getAuthorId();
+                if (aid != null) {
+                    authorIds.add(aid);
+                }
 
-            String createdAtStr = (c.getCreatedAt() != null) ? c.getCreatedAt().toString() : "unknown";
-            String updatedAtStr = (c.getUpdatedAt() != null) ? c.getUpdatedAt().toString() : "unknown";
-
-            items.add(new CommentResponse(
-                    c.getId(),
-                    c.getPostId(),
-                    author.getId(),
-                    c.getContent(),
-                    createdAtStr,
-                    updatedAtStr
-            ));
+                Long cid = c.getId();
+                if (cid != null) {
+                    commentIds.add(cid);
+                }
+            }
             i = i + 1;
         }
+
+        // 2) 일괄 조회 (작성자)
+        Map<Long, User> authorMap = userService.findByIds(authorIds);
+
+        // 3) 일괄 조회 (댓글 좋아요 수)
+        Map<Long, Long> likeCountMap = commentLikeService.countByCommentIds(commentIds);
+
+        // 4) 매퍼로 변환
+        List<CommentResponse> items = CommentMapper.toResponseList(data, authorMap, likeCountMap);
 
         PageMeta meta = new PageMeta(p, s, totalElements, totalPages);
         CommentListResponse payload = new CommentListResponse(items, meta);
@@ -134,50 +148,35 @@ public class CommentController {
             )
     })
     public ApiResponse<CommentResponse> update(
-            @RequestHeader(value = "Authorization", required = false) String auth,
+            @CurrentUserId Long userId,
             @PathVariable("postId") Long postId,
             @PathVariable("commentId") Long commentId,
             @RequestBody CommentUpdateRequest body
     ) {
-        Long requesterId = TokenUtil.resolveUserId(auth);
-        Comment c = commentService.update(commentId, requesterId, body.content);
+        Comment c = commentService.update(postId, commentId, userId, body.content);
 
-        User author = userService.getMe(c.getAuthorId());
-        String createdAtStr = (c.getCreatedAt() != null) ? c.getCreatedAt().toString() : "unknown";
-        String updatedAtStr = (c.getUpdatedAt() != null) ? c.getUpdatedAt().toString() : "unknown";
+        long likeCount = commentLikeService.count(commentId);
 
-        CommentResponse res = new CommentResponse(
-                c.getId(),
-                c.getPostId(),
-                author.getId(),
-                c.getContent(),
-                createdAtStr,
-                updatedAtStr
-        );
+        Long author = 0L;
+        if (c != null) {
+            Long aid = c.getAuthorId();
+            if (aid != null) {
+                author = aid;
+            }
+        }
+        CommentResponse res = CommentMapper.toResponse(c, author,likeCount);
         return ApiResponse.ok("댓글 수정 성공", res);
     }
 
     // 삭제
     @DeleteMapping("/{commentId}")
     @io.swagger.v3.oas.annotations.Operation(summary = "댓글 삭제", description = "작성자 불일치 시 403 가능")
-    @io.swagger.v3.oas.annotations.responses.ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "403", description = "권한이 없습니다.",
-                    content = @io.swagger.v3.oas.annotations.media.Content(
-                            mediaType = "application/json",
-                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
-                                    value = "{\"isSuccess\":false,\"code\":403,\"message\":\"권한이 없습니다.\",\"result\":null}"
-                            )
-                    )
-            )
-    })
     public ApiResponse<Void> delete(
-            @RequestHeader(value = "Authorization", required = false) String auth,
+            @CurrentUserId Long userId,
             @PathVariable("postId") Long postId,
             @PathVariable("commentId") Long commentId
     ) {
-        Long requesterId = TokenUtil.resolveUserId(auth);
-        commentService.delete(commentId, requesterId);
+        commentService.delete(postId, commentId, userId);
         return ApiResponse.ok("댓글 삭제 성공", null);
     }
 }

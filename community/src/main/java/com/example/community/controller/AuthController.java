@@ -45,7 +45,6 @@ public class AuthController {
             )
     })
     public ApiResponse<SignupResult> signup(@Valid @RequestBody SignupRequest body) {
-        // profileImage까지 전달
         User u = users.signup(body.email, body.password, body.nickname, body.profileImage);
 
         SignupResult result = new SignupResult(
@@ -86,7 +85,6 @@ public class AuthController {
         return ApiResponse.ok("로그아웃 성공", null);
     }
 
-    // 응답 전용
     static class SignupResult {
         public final String id;
         public final String nickname;
