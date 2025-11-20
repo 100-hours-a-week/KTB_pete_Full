@@ -74,7 +74,7 @@ public class AuthController {
         User u = users.login(body.email, body.password);
         String token = TokenUtil.issueDummyToken(u.getId());
 
-        LoginUser user = new LoginUser(String.valueOf(u.getId()), u.getEmail(), "active");
+        LoginUser user = new LoginUser(String.valueOf(u.getId()), u.getEmail());
         LoginResult result = new LoginResult(token, user);
         return ApiResponse.ok("로그인 성공", result);
     }

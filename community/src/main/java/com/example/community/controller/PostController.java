@@ -1,7 +1,9 @@
+// controller/PostController.java
 package com.example.community.controller;
 
 import com.example.community.common.ApiResponse;
 import com.example.community.common.web.CurrentUserId;
+import com.example.community.common.security.TokenUtil;
 import com.example.community.common.sort.PostSortBy;
 import com.example.community.common.sort.SortDir;
 import com.example.community.dto.post.PageMeta;
@@ -12,8 +14,10 @@ import com.example.community.dto.post.PostUpdateRequest;
 import com.example.community.domain.Post;
 import com.example.community.domain.User;
 import com.example.community.mapper.PostMapper;
+import com.example.community.service.PostLikeService;
 import com.example.community.service.PostService;
 import com.example.community.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,10 +29,12 @@ public class PostController {
 
     private final PostService postService;
     private final UserService userService;
+    private final PostLikeService postLikeService;
 
-    public PostController(PostService postService, UserService userService) {
+    public PostController(PostService postService, UserService userService, PostLikeService postLikeService) {
         this.postService = postService;
         this.userService = userService;
+        this.postLikeService = postLikeService;
     }
 
     // 게시글 생성
@@ -50,25 +56,38 @@ public class PostController {
             @Valid @RequestBody PostCreateRequest body
     ) {
         Post p = postService.create(userId, body.title, body.content, body.image);
-        PostResponse res = PostMapper.toResponse(p, userId);
+        User author = userService.getMe(userId);
+        PostResponse res = PostMapper.toResponse(p, author, false);
         return ApiResponse.ok("게시글 작성 성공", res);
     }
 
-    // 게시글 단건 조회
+    // 게시글 단건 조회 (작성자 정보 + 현재 유저 liked 포함)
     @GetMapping("/{postId}")
-    public ApiResponse<PostResponse> getOne(@PathVariable("postId") Long postId) {
+    public ApiResponse<PostResponse> getOne(
+            @PathVariable("postId") Long postId,
+            HttpServletRequest request
+    ) {
         Post p = postService.getOne(postId); // views 증가 포함
-        Long userId = 0L;
-        if (p != null) {
-            Long aid = p.getAuthorId();
-            if (aid != null) {
-                userId = aid;
+
+        User author = null;
+        if (p != null && p.getAuthorId() != null) {
+            author = userService.getMe(p.getAuthorId());
+        }
+
+        boolean liked = false;
+        if (request != null) {
+            String auth = request.getHeader("Authorization");
+            if (auth != null && !auth.isBlank()) {
+                Long currentUserId = TokenUtil.resolveUserId(auth);
+                liked = postLikeService.isLiked(postId, currentUserId);
             }
         }
-        PostResponse res = PostMapper.toResponse(p, userId);
+
+        PostResponse res = PostMapper.toResponse(p, author, liked);
         return ApiResponse.ok("게시글 불러오기 성공", res);
     }
 
+    // 게시글 목록 조회 (작성자 정보 포함, liked는 항상 false)
     @GetMapping
     public ApiResponse<PostListResponse> list(
             @RequestParam(value = "page", required = false) Integer page,
@@ -97,12 +116,12 @@ public class PostController {
         org.springframework.data.domain.Page<Post> pageResult =
                 postService.listAllPaged(p, s, sortBy, direction);
 
-        java.util.List<Post> data = pageResult.getContent();
+        List<Post> data = pageResult.getContent();
         long totalElements = pageResult.getTotalElements();
         int totalPages = pageResult.getTotalPages();
 
         // 1) 작성자 id 수집
-        java.util.Set<Long> authorIds = new java.util.HashSet<>();
+        Set<Long> authorIds = new HashSet<>();
         int sizeList = data.size();
         int idx = 0;
         while (idx < sizeList) {
@@ -116,11 +135,11 @@ public class PostController {
             idx = idx + 1;
         }
 
-        // 2) 일괄 조회
-        java.util.Map<Long, User> authorMap = userService.findByIds(authorIds);
+        // 2) 작성자 일괄 조회
+        Map<Long, User> authorMap = userService.findByIds(authorIds);
 
-        // 3) 매퍼로 일괄 변환
-        java.util.List<PostResponse> items = PostMapper.toResponseList(data, authorMap);
+        // 3) 응답 변환 (liked는 목록에선 false)
+        List<PostResponse> items = PostMapper.toResponseList(data, authorMap);
 
         PageMeta meta = new PageMeta(p, s, totalElements, totalPages);
         PostListResponse payload = new PostListResponse(items, meta);
@@ -147,14 +166,13 @@ public class PostController {
             @RequestBody PostUpdateRequest body
     ) {
         Post p = postService.update(postId, userId, body.title, body.content, body.image);
-        Long author = 0L;
-        if (p != null) {
-            Long aid = p.getAuthorId();
-            if (aid != null) {
-                author = aid;
-            }
+
+        User author = null;
+        if (p != null && p.getAuthorId() != null) {
+            author = userService.getMe(p.getAuthorId());
         }
-        PostResponse res = PostMapper.toResponse(p, author);
+
+        PostResponse res = PostMapper.toResponse(p, author, false);
         return ApiResponse.ok("게시글 수정하기 성공", res);
     }
 

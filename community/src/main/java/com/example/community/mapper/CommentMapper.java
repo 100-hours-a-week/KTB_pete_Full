@@ -1,3 +1,4 @@
+// mapper/CommentMapper.java
 package com.example.community.mapper;
 
 import com.example.community.common.util.Numbers;
@@ -13,10 +14,13 @@ import java.util.Map;
 public final class CommentMapper {
     private CommentMapper() {}
 
-    //단건 매핑: Comment + userId + likeCount → CommentResponse
-    public static CommentResponse toResponse(Comment c, Long userId, long likeCount) {
+    // 단건 매핑
+    public static CommentResponse toResponse(Comment c, User author, long likeCount) {
         Long idVal = null;
         Long postIdVal = null;
+        Long userId = 0L;
+        String writerNickname = "";
+        String writerProfileImage = "";
         String content = "";
         String likesStr = Numbers.toStringOrZero(likeCount);
         String createdAtStr = "unknown";
@@ -25,6 +29,11 @@ public final class CommentMapper {
         if (c != null) {
             idVal = c.getId();
             postIdVal = c.getPostId();
+
+            Long aid = c.getAuthorId();
+            if (aid != null) {
+                userId = aid;
+            }
 
             String txt = c.getContent();
             if (txt != null) {
@@ -35,10 +44,23 @@ public final class CommentMapper {
             updatedAtStr = Times.toIsoOrUnknown(c.getUpdatedAt());
         }
 
+        if (author != null) {
+            String nick = author.getNickname();
+            if (nick != null) {
+                writerNickname = nick;
+            }
+            String pi = author.getProfileImageUrl();
+            if (pi != null) {
+                writerProfileImage = pi;
+            }
+        }
+
         return new CommentResponse(
                 idVal,
                 postIdVal,
-                Numbers.longOrZero(userId),
+                userId,
+                writerNickname,
+                writerProfileImage,
                 content,
                 likesStr,
                 createdAtStr,
@@ -46,7 +68,7 @@ public final class CommentMapper {
         );
     }
 
-    // 목록 매핑: comments + authorMap + likeCountMap → List<CommentResponse>
+    // 목록 매핑
     public static List<CommentResponse> toResponseList(
             List<Comment> comments,
             Map<Long, User> authorMap,
@@ -61,7 +83,7 @@ public final class CommentMapper {
         while (i < size) {
             Comment c = comments.get(i);
             Long authorId = null;
-            Long userId = 0L;
+            User author = null;
 
             if (c != null) {
                 authorId = c.getAuthorId();
@@ -69,9 +91,7 @@ public final class CommentMapper {
             if (authorId != null) {
                 User au = authorMap.get(authorId);
                 if (au != null && au.getId() != null) {
-                    userId = au.getId();
-                } else {
-                    userId = authorId;
+                    author = au;
                 }
             }
 
@@ -86,7 +106,7 @@ public final class CommentMapper {
                 }
             }
 
-            items.add(toResponse(c, userId, likeCount));
+            items.add(toResponse(c, author, likeCount));
             i = i + 1;
         }
         return items;

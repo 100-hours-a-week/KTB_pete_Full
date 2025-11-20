@@ -1,3 +1,4 @@
+// service/PostLikeService.java
 package com.example.community.service;
 
 import com.example.community.common.BusinessException;
@@ -48,7 +49,6 @@ public class PostLikeService {
         return true;
     }
 
-    // true면 좋아요 취소, false 좋아요 없었음
     @Transactional
     public boolean unlike(Long postId, Long userId) {
         Post post = posts.findById(postId)
@@ -72,5 +72,13 @@ public class PostLikeService {
 
     public long count(Long postId) {
         return likes.countByPostId(postId);
+    }
+
+    /** 현재 유저가 해당 게시글을 좋아요 눌렀는지 여부 */
+    public boolean isLiked(Long postId, Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        return likes.existsByUserIdAndPostId(userId, postId);
     }
 }

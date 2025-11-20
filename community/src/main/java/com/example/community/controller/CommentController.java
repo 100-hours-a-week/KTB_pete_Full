@@ -60,7 +60,8 @@ public class CommentController {
         }
 
         Comment c = commentService.create(postId, userId, body.content);
-        CommentResponse res = CommentMapper.toResponse(c, userId, 0L);
+        User author = userService.getMe(userId);
+        CommentResponse res = CommentMapper.toResponse(c, author, 0L);
         return ApiResponse.ok("댓글 작성 성공", res);
     }
 
@@ -157,17 +158,14 @@ public class CommentController {
 
         long likeCount = commentLikeService.count(commentId);
 
-        Long author = 0L;
-        if (c != null) {
-            Long aid = c.getAuthorId();
-            if (aid != null) {
-                author = aid;
-            }
+        User author = null;
+        if (c != null && c.getAuthorId() != null) {
+            author = userService.getMe(c.getAuthorId());
         }
-        CommentResponse res = CommentMapper.toResponse(c, author,likeCount);
+
+        CommentResponse res = CommentMapper.toResponse(c, author, likeCount);
         return ApiResponse.ok("댓글 수정 성공", res);
     }
-
     // 삭제
     @DeleteMapping("/{commentId}")
     @io.swagger.v3.oas.annotations.Operation(summary = "댓글 삭제", description = "작성자 불일치 시 403 가능")
