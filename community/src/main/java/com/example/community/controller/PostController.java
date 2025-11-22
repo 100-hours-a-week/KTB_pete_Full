@@ -10,14 +10,12 @@ import com.example.community.domain.User;
 import com.example.community.dto.post.PageMeta;
 import com.example.community.dto.post.PostListResponse;
 import com.example.community.dto.post.PostResponse;
-import com.example.community.dto.post.PostUpdateRequest;
 import com.example.community.mapper.PostMapper;
 import com.example.community.service.PostLikeService;
 import com.example.community.service.PostService;
 import com.example.community.service.UserService;
 import com.example.community.storage.FileStorageService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -55,16 +53,13 @@ public class PostController {
             @RequestParam("content") String content,
             @RequestPart(value = "image", required = false) MultipartFile image
     ) {
-        // 1) 파일 저장 (로컬 or S3 구현체)
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
             imageUrl = fileStorageService.store(image, "posts");
         }
 
-        // 2) DB 저장
         Post p = postService.create(userId, title, content, imageUrl);
 
-        // 3) 작성자 정보 + liked=false (막 생성했으니 기본 false)
         User author = userService.getMe(userId);
         PostResponse res = PostMapper.toResponse(p, author, false);
 
@@ -77,17 +72,14 @@ public class PostController {
             @PathVariable("postId") Long postId,
             HttpServletRequest request
     ) {
-        // 1) 게시글 + 조회수 증가
         Post p = postService.getOne(postId);
 
-        // 2) 작성자 정보
         Long authorId = (p != null ? p.getAuthorId() : null);
         User author = null;
         if (authorId != null) {
             author = userService.getMe(authorId);
         }
 
-        // 3) 현재 로그인 유저 기준 liked 여부 계산 (토큰 있으면)
         boolean liked = false;
         if (request != null) {
             String auth = request.getHeader("Authorization");
@@ -132,7 +124,6 @@ public class PostController {
         long totalElements = pageResult.getTotalElements();
         int totalPages = pageResult.getTotalPages();
 
-        // 작성자 id 수집
         java.util.Set<Long> authorIds = new java.util.HashSet<>();
         for (Post post : data) {
             if (post != null && post.getAuthorId() != null) {
@@ -140,10 +131,7 @@ public class PostController {
             }
         }
 
-        // 일괄 조회
         java.util.Map<Long, User> authorMap = userService.findByIds(authorIds);
-
-        // 목록 매핑 (이 버전은 liked는 포함하지 않는다고 가정)
         java.util.List<PostResponse> items = PostMapper.toResponseList(data, authorMap);
 
         PageMeta meta = new PageMeta(p, s, totalElements, totalPages);
@@ -151,23 +139,32 @@ public class PostController {
         return ApiResponse.ok("게시글 목록 불러오기 성공", payload);
     }
 
-    // ✏️ 게시글 수정 (이미지까지 multipart로 바꾸고 싶으면 여기도 나중에 수정)
-    @PatchMapping("/{postId}")
+    // ✏️ 게시글 수정 (multipart/form-data + 이미지 선택적 교체)
+    @PatchMapping(
+            value = "/{postId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     @io.swagger.v3.oas.annotations.Operation(summary = "게시글 수정", description = "작성자 불일치 시 403 반환 가능")
     public ApiResponse<PostResponse> update(
             @CurrentUserId Long userId,
             @PathVariable("postId") Long postId,
-            @RequestBody PostUpdateRequest body
+            @RequestPart("title") String title,
+            @RequestPart("content") String content,
+            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile
     ) {
-        Post p = postService.update(postId, userId, body.title, body.content, body.image);
+        // 이미지 파일이 없으면 → newImage = null → 기존 이미지 유지
+        String imageUrl = null;
+        if (imageFile != null && !imageFile.isEmpty()) {
+            imageUrl = fileStorageService.store(imageFile, "posts");
+        }
+
+        Post p = postService.update(postId, userId, title, content, imageUrl);
 
         User author = null;
         if (p != null && p.getAuthorId() != null) {
             author = userService.getMe(p.getAuthorId());
         }
 
-        // 수정 응답에서는 liked=false로 내려도 되고,
-        // 필요하다면 현재 유저 기준 isLiked를 다시 계산해도 됨
         PostResponse res = PostMapper.toResponse(p, author, false);
         return ApiResponse.ok("게시글 수정하기 성공", res);
     }

@@ -73,17 +73,30 @@ public class UserService {
         return repo.save(u);
     }
 
+//    @Transactional
+//    public void updatePassword(Long userId, String oldPw, String newPw) {
+//        if (oldPw == null || newPw == null) {
+//            throw new BusinessException(ErrorCode.BAD_REQUEST);
+//        }
+//
+//        User u = getMe(userId);
+//        String savedPw = u.getPassword();
+//        if (savedPw == null || !savedPw.equals(oldPw)) {
+//            throw new BusinessException(ErrorCode.LOGIN_PASSWORD_WRONG);
+//        }
+//
+//        u.changePassword(newPw);
+//        u.touchUpdatedAt(Instant.now());
+//        repo.save(u);
+//    }
+
     @Transactional
-    public void updatePassword(Long userId, String oldPw, String newPw) {
-        if (oldPw == null || newPw == null) {
+    public void updatePassword(Long userId, String newPw) {
+        if (newPw == null) {
             throw new BusinessException(ErrorCode.BAD_REQUEST);
         }
 
         User u = getMe(userId);
-        String savedPw = u.getPassword();
-        if (savedPw == null || !savedPw.equals(oldPw)) {
-            throw new BusinessException(ErrorCode.LOGIN_PASSWORD_WRONG);
-        }
 
         u.changePassword(newPw);
         u.touchUpdatedAt(Instant.now());

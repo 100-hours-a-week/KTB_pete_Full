@@ -5,24 +5,31 @@ import com.example.community.common.security.TokenUtil;
 import com.example.community.dto.auth.LoginRequest;
 import com.example.community.dto.auth.LoginResult;
 import com.example.community.dto.auth.LoginUser;
-import com.example.community.dto.auth.SignupRequest;
 import com.example.community.domain.User;
 import com.example.community.service.UserService;
+import com.example.community.storage.FileStorageService;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
 
     private final UserService users;
+    private final FileStorageService fileStorageService;
 
-    public AuthController(UserService users) {
+    public AuthController(UserService users, FileStorageService fileStorageService) {
         this.users = users;
+        this.fileStorageService = fileStorageService;
     }
 
-    // 회원가입
-    @PostMapping("/signup")
+    // 회원가입 (multipart/form-data + 프로필 이미지 파일 업로드)
+    @PostMapping(
+            value = "/signup",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     @io.swagger.v3.oas.annotations.Operation(summary = "회원가입", description = "이메일 중복 시 409 반환")
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -44,8 +51,20 @@ public class AuthController {
                     )
             )
     })
-    public ApiResponse<SignupResult> signup(@Valid @RequestBody SignupRequest body) {
-        User u = users.signup(body.email, body.password, body.nickname, body.profileImage);
+    public ApiResponse<SignupResult> signup(
+            @RequestPart("nickname") String nickname,
+            @RequestPart("email") String email,
+            @RequestPart("password") String password,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage
+    ) {
+        // 1) 프로필 이미지 파일 저장 (선택)
+        String profileImageUrl = null;
+        if (profileImage != null && !profileImage.isEmpty()) {
+            profileImageUrl = fileStorageService.store(profileImage, "profiles");
+        }
+
+        // 2) 회원 가입 처리 (DB에는 URL 문자열만 저장)
+        User u = users.signup(email, password, nickname, profileImageUrl);
 
         SignupResult result = new SignupResult(
                 String.valueOf(u.getId()),
@@ -74,8 +93,14 @@ public class AuthController {
         User u = users.login(body.email, body.password);
         String token = TokenUtil.issueDummyToken(u.getId());
 
-        // 🔧 LoginUser 생성자 (id, email) 두 개만 사용
-        LoginUser user = new LoginUser(String.valueOf(u.getId()), u.getEmail());
+        // 🔧 닉네임 + 프로필 이미지까지 포함해서 내려주기
+        LoginUser user = new LoginUser(
+                String.valueOf(u.getId()),
+                u.getEmail(),
+                u.getNickname(),
+                u.getProfileImageUrl()
+        );
+
         LoginResult result = new LoginResult(token, user);
         return ApiResponse.ok("로그인 성공", result);
     }

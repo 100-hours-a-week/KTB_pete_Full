@@ -1,12 +1,16 @@
 package com.example.community.controller;
 
 import com.example.community.common.ApiResponse;
+import com.example.community.common.BusinessException;
+import com.example.community.common.ErrorCode;
 import com.example.community.common.web.CurrentUserId;
+import com.example.community.dto.user.UpdatePasswordRequest;
 import com.example.community.dto.user.UserResponse;
 import com.example.community.domain.User;
 import com.example.community.mapper.UserMapper;
 import com.example.community.service.UserService;
 import com.example.community.storage.FileStorageService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -50,14 +54,44 @@ public class UserController {
     }
 
     // 비밀번호 변경
+//    @PatchMapping("/me/password")
+//    @io.swagger.v3.oas.annotations.Operation(summary = "비밀번호 변경", description = "구/신규 비밀번호 검증 실패 400 가능")
+//    public ApiResponse<String> updatePassword(
+//            @CurrentUserId Long userId,
+//            @jakarta.validation.Valid @RequestBody com.example.community.dto.user.UpdatePasswordRequest body
+//    ) {
+//        users.updatePassword(userId, body.oldPassword, body.newPassword);
+//        return ApiResponse.ok("OK", "ok");
+//    }
+
     @PatchMapping("/me/password")
-    @io.swagger.v3.oas.annotations.Operation(summary = "비밀번호 변경", description = "구/신규 비밀번호 검증 실패 400 가능")
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "비밀번호 변경",
+            description = "신규 비밀번호/확인 값 검증 실패 시 400 반환"
+    )
     public ApiResponse<String> updatePassword(
             @CurrentUserId Long userId,
-            @jakarta.validation.Valid @RequestBody com.example.community.dto.user.UpdatePasswordRequest body
+            @Valid @RequestBody UpdatePasswordRequest body
     ) {
-        users.updatePassword(userId, body.oldPassword, body.newPassword);
-        return ApiResponse.ok("OK", "ok");
+        // 1) null/blank 체크
+        if (body.newPassword == null || body.confirmPassword == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST);
+        }
+        String newPw = body.newPassword.trim();
+        String confirmPw = body.confirmPassword.trim();
+        if (newPw.isEmpty() || confirmPw.isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST);
+        }
+
+        // 2) 두 비밀번호가 서로 다른 경우
+        if (!newPw.equals(confirmPw)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST);
+        }
+
+        // 3) 서비스 호출 (이제는 새 비밀번호만 넘김)
+        users.updatePassword(userId, newPw);
+
+        return ApiResponse.ok("비밀번호 변경 성공", "ok");
     }
 
     // 회원 탈퇴
