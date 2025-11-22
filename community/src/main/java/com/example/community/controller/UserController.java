@@ -2,24 +2,29 @@ package com.example.community.controller;
 
 import com.example.community.common.ApiResponse;
 import com.example.community.common.web.CurrentUserId;
-import com.example.community.dto.user.UpdateMeRequest;
 import com.example.community.dto.user.UserResponse;
 import com.example.community.domain.User;
 import com.example.community.mapper.UserMapper;
 import com.example.community.service.UserService;
+import com.example.community.storage.FileStorageService;
+import jakarta.validation.constraints.Size;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
     private final UserService users;
+    private final FileStorageService fileStorageService;
 
-    public UserController(UserService users) {
+    public UserController(UserService users, FileStorageService fileStorageService) {
         this.users = users;
+        this.fileStorageService = fileStorageService;
     }
 
-    // 내 정보 조회
+    // 내 정보 조회 (변경 없음)
     @GetMapping("/me")
     @io.swagger.v3.oas.annotations.Operation(summary = "내 정보 조회")
     public ApiResponse<UserResponse> me(@CurrentUserId Long userId) {
@@ -27,14 +32,20 @@ public class UserController {
         return ApiResponse.ok("유저 정보 조회 성공", UserMapper.toResponse(u));
     }
 
-    // 내 정보 수정
-    @PatchMapping("/me")
-    @io.swagger.v3.oas.annotations.Operation(summary = "내 정보 수정", description = "검증 실패 400 가능")
+    // 내 정보 수정 (multipart/form-data)
+    @PatchMapping(path = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @io.swagger.v3.oas.annotations.Operation(summary = "내 정보 수정", description = "닉네임/프로필 이미지 수정")
     public ApiResponse<UserResponse> updateMe(
             @CurrentUserId Long userId,
-            @RequestBody UpdateMeRequest body
+            @RequestPart(value = "nickname", required = false) @Size(min = 1, max = 100) String nickname,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage
     ) {
-        User u = users.updateMe(userId, body.nickname, body.profileImage);
+        String profileImageUrl = null;
+        if (profileImage != null && !profileImage.isEmpty()) {
+            profileImageUrl = fileStorageService.store(profileImage, "profiles");
+        }
+
+        User u = users.updateMe(userId, nickname, profileImageUrl);
         return ApiResponse.ok("유저 정보 수정 성공", UserMapper.toResponse(u));
     }
 

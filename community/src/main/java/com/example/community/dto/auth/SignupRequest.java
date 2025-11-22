@@ -7,8 +7,6 @@ public class SignupRequest {
     @NotBlank
     public String nickname;
 
-    public String name;
-
     @Email
     @NotBlank
     public String email;
