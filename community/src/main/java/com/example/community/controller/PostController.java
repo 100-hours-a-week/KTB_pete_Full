@@ -139,7 +139,7 @@ public class PostController {
         return ApiResponse.ok("게시글 목록 불러오기 성공", payload);
     }
 
-    // ✏️ 게시글 수정 (multipart/form-data + 이미지 선택적 교체)
+    //게시글 수정
     @PatchMapping(
             value = "/{postId}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE

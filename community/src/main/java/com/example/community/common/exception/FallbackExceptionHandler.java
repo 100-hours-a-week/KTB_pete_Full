@@ -49,17 +49,17 @@ public class FallbackExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handle(Exception e) {
 
-        // 🔥 1) 콘솔에 전체 스택트레이스 남기기
+        // 콘솔에 전체 스택트레이스 남기기
         log.error("[UnexpectedException] type={}, message={}",
                 e.getClass().getName(), e.getMessage(), e);
 
-        // 🔥 2) 개발 단계니까, 어떤 예외인지 응답 message에도 같이 실어 보자
+        // 어떤 예외인지 응답 message
         String debugMessage = "[" + e.getClass().getSimpleName() + "] "
                 + ErrorCode.SERVER_ERROR.getMessage();
 
         return ResponseEntity
                 .status(ErrorCode.SERVER_ERROR.getStatus())
-                // 원래는 ErrorResponse.of(...)였는데, 잠깐 디버깅용으로 직접 메시지 넣자
+                // ErrorResponse.of -> 디버깅용으로 직접 메시지
                 .body(ApiResponse.fail(
                         ErrorCode.SERVER_ERROR.getStatus(),
                         debugMessage
