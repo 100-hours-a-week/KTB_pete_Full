@@ -54,6 +54,7 @@ public class UserService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         String savedPw = u.getPassword();
+
         if (savedPw == null || !savedPw.equals(password)) {
             throw new BusinessException(ErrorCode.LOGIN_PASSWORD_WRONG);
         }

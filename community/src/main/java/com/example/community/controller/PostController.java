@@ -1,7 +1,7 @@
 package com.example.community.controller;
 
 import com.example.community.common.ApiResponse;
-import com.example.community.common.security.TokenUtil;
+import com.example.community.common.security.JwtProvider;
 import com.example.community.common.sort.PostSortBy;
 import com.example.community.common.sort.SortDir;
 import com.example.community.common.web.CurrentUserId;
@@ -19,6 +19,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.*;
 
@@ -30,18 +32,22 @@ public class PostController {
     private final UserService userService;
     private final PostLikeService postLikeService;
     private final FileStorageService fileStorageService;
+    private final JwtProvider jwtProvider;
 
     public PostController(PostService postService,
                           UserService userService,
                           PostLikeService postLikeService,
-                          FileStorageService fileStorageService) {
+                          FileStorageService fileStorageService,
+                          JwtProvider jwtProvider) {
         this.postService = postService;
         this.userService = userService;
         this.postLikeService = postLikeService;
         this.fileStorageService = fileStorageService;
+        this.jwtProvider = jwtProvider;
+
     }
 
-    // 📝 게시글 생성 (multipart/form-data + 파일 업로드)
+    // 게시글 생성 (multipart/form-data, 파일 업로드)
     @PostMapping(
             value = "",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -66,12 +72,12 @@ public class PostController {
         return ApiResponse.ok("게시글 작성 성공", res);
     }
 
-    // 🧐 게시글 단건 조회 (작성자 정보 + 좋아요 여부 포함)
+    // 게시글 단건 조회 (작성자 정보, 좋아요 여부 포함)
     @GetMapping("/{postId}")
     public ApiResponse<PostResponse> getOne(
-            @PathVariable("postId") Long postId,
-            HttpServletRequest request
+            @PathVariable("postId") Long postId
     ) {
+        // 1) 게시글, 작성자 조회
         Post p = postService.getOne(postId);
 
         Long authorId = (p != null ? p.getAuthorId() : null);
@@ -80,24 +86,22 @@ public class PostController {
             author = userService.getMe(authorId);
         }
 
+        // 2) 기본값: 익명 사용자 → liked = false
         boolean liked = false;
-        if (request != null) {
-            String auth = request.getHeader("Authorization");
-            if (auth != null && !auth.isBlank()) {
-                try {
-                    Long currentUserId = TokenUtil.resolveUserId(auth);
-                    liked = postLikeService.isLiked(postId, currentUserId);
-                } catch (Exception ignore) {
-                    // 토큰 형식 오류 등은 그냥 liked=false로 처리
-                }
-            }
+
+        // 3) SecurityContext에 인증 정보가 있으면 userId 꺼내서 좋아요 여부 조회
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof Long) {
+            Long currentUserId = (Long) auth.getPrincipal();
+            liked = postLikeService.isLiked(postId, currentUserId);
         }
 
         PostResponse res = PostMapper.toResponse(p, author, liked);
         return ApiResponse.ok("게시글 불러오기 성공", res);
     }
 
-    // 📄 게시글 목록 조회 (작성자 정보만 포함, liked는 포함 X)
+
+    // 게시글 목록 조회 (작성자 정보만 포함, liked는 포함 X)
     @GetMapping
     public ApiResponse<PostListResponse> list(
             @RequestParam(value = "page", required = false) Integer page,
@@ -144,15 +148,17 @@ public class PostController {
             value = "/{postId}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
-    @io.swagger.v3.oas.annotations.Operation(summary = "게시글 수정", description = "작성자 불일치 시 403 반환 가능")
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "게시글 수정",
+            description = "작성자 불일치 시 403 반환 가능"
+    )
     public ApiResponse<PostResponse> update(
             @CurrentUserId Long userId,
             @PathVariable("postId") Long postId,
-            @RequestPart("title") String title,
-            @RequestPart("content") String content,
+            @RequestParam("title") String title,      // Text
+            @RequestParam("content") String content,  // Text
             @RequestPart(value = "imageFile", required = false) MultipartFile imageFile
     ) {
-        // 이미지 파일이 없으면 → newImage = null → 기존 이미지 유지
         String imageUrl = null;
         if (imageFile != null && !imageFile.isEmpty()) {
             imageUrl = fileStorageService.store(imageFile, "posts");
@@ -169,7 +175,7 @@ public class PostController {
         return ApiResponse.ok("게시글 수정하기 성공", res);
     }
 
-    // 🗑 게시글 삭제
+    // 게시글 삭제
     @DeleteMapping("/{postId}")
     public ApiResponse<Void> delete(
             @CurrentUserId Long userId,

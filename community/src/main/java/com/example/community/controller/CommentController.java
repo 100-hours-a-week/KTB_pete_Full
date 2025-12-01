@@ -98,7 +98,7 @@ public class CommentController {
         long totalElements = pageResult.getTotalElements();
         int totalPages = pageResult.getTotalPages();
 
-        // 1) 작성자 id 수집 + 댓글 id 수집
+        // 1) 작성자 id 수집, 댓글 id 수집
         Set<Long> authorIds = new HashSet<Long>();
         List<Long> commentIds = new ArrayList<Long>();
 

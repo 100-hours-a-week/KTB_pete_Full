@@ -1,4 +1,3 @@
-// src/main/java/com/example/community/config/CorsConfig.java
 package com.example.community.config;
 
 import org.springframework.context.annotation.Configuration;

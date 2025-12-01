@@ -17,3 +17,10 @@ spring:
 
   jackson:
     time-zone: Asia/Seoul
+
+app:
+  jwt:
+    access-token-secret: ${APP_JWT_ACCESS_TOKEN_SECRET:local-dev-access-secret-change-me}
+    refresh-token-secret: ${APP_JWT_REFRESH_TOKEN_SECRET:local-dev-refresh-secret-change-me}
+    access-token-expiration-minutes: 30
+    refresh-token-expiration-days: 30
