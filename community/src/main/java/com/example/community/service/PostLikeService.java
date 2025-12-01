@@ -73,7 +73,7 @@ public class PostLikeService {
         return likes.countByPostId(postId);
     }
 
-    // 🔧 상세조회에서 “현재 유저가 좋아요 눌렀는지 여부” 확인용
+    // 상세조회에서 “현재 유저가 좋아요 눌렀는지 여부” 확인용
     public boolean isLiked(Long postId, Long userId) {
         return likes.existsByUserIdAndPostId(userId, postId);
     }

@@ -1,4 +1,3 @@
-// mapper/PostMapper.java
 package com.example.community.mapper;
 
 import com.example.community.common.util.Numbers;

@@ -1,4 +1,3 @@
-// dto/comment/CommentResponse.java
 package com.example.community.dto.comment;
 
 public class CommentResponse {

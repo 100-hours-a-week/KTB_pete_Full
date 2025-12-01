@@ -4,12 +4,18 @@ public enum ErrorCode {
     // 400 계열
     BAD_REQUEST("BAD_REQUEST", "잘못된 요청입니다.", 400),
     REQUEST_INCORRECT("REQUEST_INCORRECT", "요청 값이 올바르지 않습니다.", 400),
-    TOKEN_FORMAT_INCORRECT("TOKEN_FORMAT_INCORRECT", "토큰 형식이 올바르지 않습니다.", 401),
 
-    // 401/403
+    // 401/403 관련
+    TOKEN_FORMAT_INCORRECT("TOKEN_FORMAT_INCORRECT", "토큰 형식이 올바르지 않습니다.", 401),
     UNAUTHORIZED("UNAUTHORIZED", "인증이 필요합니다.", 401),
     LOGIN_PASSWORD_WRONG("LOGIN_PASSWORD_WRONG", "비밀번호가 일치하지 않습니다.", 401),
     FORBIDDEN("FORBIDDEN", "권한이 없습니다.", 403),
+
+    // JWT / Refresh Token 관련
+    ACCESS_TOKEN_EXPIRED("ACCESS_TOKEN_EXPIRED", "Access Token이 만료되었습니다.", 401),
+    ACCESS_TOKEN_INVALID("ACCESS_TOKEN_INVALID", "Access Token이 유효하지 않습니다.", 401),
+    REFRESH_TOKEN_EXPIRED("REFRESH_TOKEN_EXPIRED", "Refresh Token이 만료되었습니다.", 401),
+    REFRESH_TOKEN_INVALID("REFRESH_TOKEN_INVALID", "Refresh Token이 유효하지 않습니다.", 401),
 
     // 404/409
     MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "회원을 찾을 수 없습니다.", 404),

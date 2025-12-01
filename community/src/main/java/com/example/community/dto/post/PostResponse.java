@@ -1,4 +1,3 @@
-// dto/post/PostResponse.java
 package com.example.community.dto.post;
 
 public class PostResponse {
