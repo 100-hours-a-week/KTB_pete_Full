@@ -35,23 +35,37 @@ public class RefreshTokenService {
     // 유저에게 새로운 Refresh Token 발급
     @Transactional
     public RefreshTokenResult issue(Long userId) {
-        // 유저 존재 여부 검증
+        // 1) 유저 존재 여부 검증
         Optional<User> userOpt = users.findById(userId);
         if (userOpt.isEmpty()) {
             throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
         }
 
-        // 유저당 하나의 RT만 유지
-        refreshTokens.deleteByUserId(userId);
-
+        // 2) 새 토큰 값 / 만료 시각 계산
         String tokenValue = generateTokenValue();
         Instant now = Instant.now();
         Instant expiresAt = now.plus(REFRESH_TOKEN_TTL);
 
-        RefreshToken entity = RefreshToken.create(userId, tokenValue, expiresAt);
-        RefreshToken saved = refreshTokens.save(entity);
+        // 3) 기존 RT 조회 (유저당 1개 유지)
+        Optional<RefreshToken> existingOpt = refreshTokens.findByUserId(userId);
 
-        return new RefreshTokenResult(saved.getUserId(), saved.getToken(), saved.getExpiresAt());
+        RefreshToken saved;
+        if (existingOpt.isPresent()) {
+            // 3-1) 있으면 값 교체 (update)
+            RefreshToken existing = existingOpt.get();
+            existing.updateToken(tokenValue, expiresAt);
+            saved = refreshTokens.save(existing);
+        } else {
+            // 3-2) 없으면 새로 생성 (insert)
+            RefreshToken entity = RefreshToken.create(userId, tokenValue, expiresAt);
+            saved = refreshTokens.save(entity);
+        }
+
+        return new RefreshTokenResult(
+                saved.getUserId(),
+                saved.getToken(),
+                saved.getExpiresAt()
+        );
     }
 
     // 주어진 토큰 문자열이 유효한지 검증하고, 유저 ID를 반환

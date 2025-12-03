@@ -48,6 +48,12 @@ public class RefreshToken {
     public Instant getExpiresAt() { return expiresAt; }
     public Instant getCreatedAt() { return createdAt; }
 
+    public void updateToken(String newToken, Instant newExpiresAt) {
+        this.token = newToken;
+        this.expiresAt = newExpiresAt;
+        this.createdAt = Instant.now(); // 새 토큰 발급 기준으로 갱신
+    }
+
     public boolean isExpired(Instant now) {
         if (expiresAt == null) {
             return true;
