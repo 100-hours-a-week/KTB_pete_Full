@@ -271,42 +271,8 @@ create, updateToken, isExpired
 
 <br><br>
 
-🧱 폴더 구조<br>
-text
-코드 복사
-src
- └─ main
-    ├─ java
-    │   └─ com.example.community
-    │       ├─ common
-    │       │   ├─ doc
-    │       │   ├─ exception
-    │       │   ├─ security
-    │       │   ├─ sort
-    │       │   ├─ util
-    │       │   └─ web
-    │       ├─ config
-    │       ├─ controller
-    │       ├─ domain
-    │       ├─ dto
-    │       │   ├─ auth
-    │       │   ├─ comment
-    │       │   ├─ like
-    │       │   ├─ post
-    │       │   └─ user
-    │       ├─ mapper
-    │       ├─ repository
-    │       ├─ service
-    │       └─ storage
-    └─ resources
-        ├─ application.yml
-        └─ ...
-
-<br><br>
-
 ▶️ 실행 방법<br>
 1. 레포지토리 클론<br>
-<br><br>
 git clone https://github.com/100-hours-a-week/KTB_pete_Full.git<br>
 cd KTB_pete_Full
 <br><br>
