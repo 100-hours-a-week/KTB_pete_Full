@@ -292,7 +292,6 @@ app:<br>
     refresh-token-secret: ${APP_JWT_REFRESH_TOKEN_SECRET:local-dev-refresh-secret-change-me}<br>
     access-token-expiration-minutes: 30<br>
     refresh-token-expiration-days: 30<br>
-필수 환경 변수 예시<br>
 <br><br>
 DB_URL (예: jdbc:mysql://localhost:3306/community?useSSL=false&serverTimezone=Asia/Seoul)<br><br>
 
