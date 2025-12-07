@@ -11,6 +11,52 @@ Frontend(Vanilla JS)와 연동하여 **인증·게시글·댓글·좋아요·파
 <br><br>
 
 ---
+🎬 시연 이미지 / 영상<br>
+회원가입<br>
+
+
+https://github.com/user-attachments/assets/27466914-5813-4f22-ad08-a30e109e7a04
+
+
+
+<br><br>
+로그인 및 메인페이지<br>
+
+
+
+https://github.com/user-attachments/assets/2787f27a-f504-463b-99e5-98e6622b6bc6
+
+
+<br><br>
+게시글 관련<br>
+
+
+
+https://github.com/user-attachments/assets/6e2cba2a-24cd-4fcc-811b-2df67b6dfc7e
+
+
+<br><br>
+게시글/댓글/회원정보/비밀번호 수정<br>
+
+
+https://github.com/user-attachments/assets/bf39da6a-b356-4c26-8cb7-1d114d7bf4db
+
+
+
+https://github.com/user-attachments/assets/4ebb19ca-8ef1-4660-9f64-b1536fede022
+
+
+<br><br>
+로그아웃<br>
+
+
+
+https://github.com/user-attachments/assets/9ca1e343-5e13-4163-a9a9-5d4d7017a7ce
+
+
+
+<br><br>
+---
 
 ## 🚀 **주요 기능 (API 개요)**
 <br><br>
