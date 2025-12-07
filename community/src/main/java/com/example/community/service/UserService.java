@@ -4,6 +4,8 @@ import com.example.community.common.BusinessException;
 import com.example.community.common.ErrorCode;
 import com.example.community.domain.User;
 import com.example.community.repository.UserRepository;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,9 +20,11 @@ import java.util.Set;
 public class UserService {
 
     private final UserRepository repo;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository repo) {
+    public UserService(UserRepository repo, PasswordEncoder passwordEncoder) {
         this.repo = repo;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Map<Long, User> findByIds(Set<Long> ids) {
@@ -45,7 +49,11 @@ public class UserService {
             throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXIST);
         });
 
-        User u = User.create(email, password, nickname, profileImage);
+        // 1) 원문 비밀번호를 BCrypt 해시로 변환
+        String encodedPassword = passwordEncoder.encode(password);
+
+        // 2) 해시된 비밀번호를 User에 저장
+        User u = User.create(email, encodedPassword, nickname, profileImage);
         return repo.save(u);
     }
 
@@ -55,7 +63,8 @@ public class UserService {
 
         String savedPw = u.getPassword();
 
-        if (savedPw == null || !savedPw.equals(password)) {
+        if (savedPw == null || !passwordEncoder.matches(password, savedPw)) {
+            // matches(입력받은 평문, 저장된 해시)
             throw new BusinessException(ErrorCode.LOGIN_PASSWORD_WRONG);
         }
         return u;
@@ -99,7 +108,9 @@ public class UserService {
 
         User u = getMe(userId);
 
-        u.changePassword(newPw);
+        // 새 비밀번호도 해시해서 저장
+        String encoded = passwordEncoder.encode(newPw);
+        u.changePassword(encoded);
         u.touchUpdatedAt(Instant.now());
         repo.save(u);
     }
